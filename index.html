@@ -167,6 +167,11 @@ function drawHeader(){
 }
 function drawMenu(){
   drawHeader();
+
+  // start fresh BEFORE pushing any buttons
+  buttons = [];
+
+  // Install button or iOS hint
   if (canInstall && !isStandalone()) {
     const ib = button('⬇ Install app', CW()/2-260, 280, 520, 56, '#ffffff', COLORS.ink);
     ib.onClick = async () => {
@@ -181,17 +186,22 @@ function drawMenu(){
     ctx.textAlign='center'; ctx.fillStyle=COLORS.ink; ctx.font='18px system-ui';
     ctx.fillText('On iPhone/iPad: Share ▸ Add to Home Screen to install', CW()/2, 312);
   }
+
+  // badges
   drawBadge(40,240,'Daily streak', PROG.streak+' 🔥');
   drawBadge(240,240,'Words learned', PROG.learned);
   drawBadge(440,240,'Games played', PROG.games);
-  buttons=[];
-  buttons.push( button('🐭 Mouse & Cheese (Game)', CW()/2-260, 340, 520, 70, COLORS.green) ); buttons[0].route='game';
-  buttons.push( button('🗂 Flashcards', CW()/2-260, 430, 520, 70) ); buttons[1].route='flash';
-  buttons.push( button('📝 Quiz', CW()/2-260, 520, 520, 70) ); buttons[2].route='quiz';
-  buttons.push( button('📈 Progress', CW()/2-260, 610, 520, 70) ); buttons[3].route='progress';
+
+  // main buttons (PUSH, don’t reset!)
+  buttons.push( button('🐭 Mouse & Cheese (Game)', CW()/2-260, 340, 520, 70, COLORS.green) ); buttons[buttons.length-1].route='game';
+  buttons.push( button('🗂 Flashcards', CW()/2-260, 430, 520, 70) ); buttons[buttons.length-1].route='flash';
+  buttons.push( button('📝 Quiz', CW()/2-260, 520, 520, 70) ); buttons[buttons.length-1].route='quiz';
+  buttons.push( button('📈 Progress', CW()/2-260, 610, 520, 70) ); buttons[buttons.length-1].route='progress';
+
   ctx.fillStyle='#00000060'; ctx.font='16px system-ui'; ctx.textAlign='center';
   ctx.fillText('Tip: enable audio — each cheese teaches a new French word with native pronunciation.', CW()/2, CH()-80);
 }
+
 
 /* ---------- Click handling ---------- */
 canvas.addEventListener('click', ()=>{
