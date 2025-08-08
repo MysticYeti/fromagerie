@@ -1,12 +1,12 @@
 {
-  "name": "Fromagerie — Learn French",
-  "short_name": "Fromagerie",
-  "description": "Canvas-based French learning with a mouse-and-cheese game, flashcards, and quizzes.",
+  "name": "Gare à Mots — Learn French",
+  "short_name": "Gare à Mots",
+  "description": "A railway-themed canvas PWA to practice French with games, flashcards, and quizzes.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#fff7e6",
-  "theme_color": "#ffb703",
+  "background_color": "#fff9f0",
+  "theme_color": "#ce0f69",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
