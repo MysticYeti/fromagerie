@@ -1,5 +1,4 @@
-// sw.js
-const CACHE_VERSION = 'fromagerie-v1.0.4';
+const CACHE_VERSION = 'gare-a-mots-v1.0.1';
 const APP_SHELL = [
   './index.html',
   './manifest.webmanifest',
