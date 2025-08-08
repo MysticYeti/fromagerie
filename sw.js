@@ -1,7 +1,7 @@
 // sw.js
-const CACHE_VERSION = 'fromagerie-v1.0.0';
+const CACHE_VERSION = 'fromagerie-v1.0.2';
 const APP_SHELL = [
-  './fromagerie.html',
+  './index.html',
   './manifest.webmanifest',
   './sw.js',
   './icons/icon-192.png',
@@ -30,7 +30,7 @@ self.addEventListener('fetch', (event) => {
           const copy = res.clone();
           caches.open(CACHE_VERSION).then(c => c.put(req, copy));
           return res;
-        }).catch(() => caches.match('./fromagerie.html'))
+        }).catch(() => caches.match('./index.html'))
       )
     );
   }
