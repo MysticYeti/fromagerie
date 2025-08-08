@@ -3,51 +3,56 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Fromagerie — Learn French (Canvas)</title>
-
-<!-- PWA bits -->
+<title>Gare à Mots — Learn French</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#ffb703">
+<meta name="theme-color" content="#ce0f69">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-
 <style>
-  html,body{margin:0;height:100%;background:#f7f2e9;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  canvas{display:block;width:100vw;height:100vh;background:linear-gradient(180deg,#fff9f0,#f4ead6)}
+  html,body{margin:0;height:100%;background:#fff9f0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  canvas{display:block;width:100vw;height:100vh;background:#fff9f0}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <script>
-/* =========================
-   Fromagerie — Full Canvas App + PWA Install (DPR-safe)
-   ========================= */
+// ===== Canvas setup =====
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 let DPR = Math.min(2, window.devicePixelRatio || 1);
 function CW(){ return canvas.width / DPR; }
 function CH(){ return canvas.height / DPR; }
-function resize(){
-  DPR = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width  = Math.floor(innerWidth  * DPR);
-  canvas.height = Math.floor(innerHeight * DPR);
-  ctx.setTransform(DPR,0,0,DPR,0,0); // work in CSS px
+function resize(){ DPR = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.floor(innerWidth*DPR); canvas.height = Math.floor(innerHeight*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
 }
 addEventListener('resize', resize); resize();
 
-/* ---------- Theme ---------- */
+// ===== Colors =====
+const APP_NAME = 'Gare à Mots';
 const COLORS = {
-  primary: '#2f4858', accent: '#ffb703', accent2:'#fb8500',
-  green:  '#76c893', red: '#ef233c', cream: '#fff7e6', ink: '#19222a'
+  primary:'#1e2a36',
+  accent:'#ce0f69',
+  accent2:'#ff6a00',
+  steel:'#8a949e',
+  concrete:'#f3f5f7',
+  paper:'#fff9f0',
+  ink:'#1e2a36',
+  green:'#3dbb6b',
+  red:'#ef233c'
 };
+
+// ===== UI Helpers =====
 function roundRect(x,y,w,h,r,fill,stroke){
   ctx.beginPath();
   ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
   if(fill){ctx.fillStyle=fill;ctx.fill()}
   if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=4;ctx.stroke()}
 }
-function button(text,x,y,w,h,fill=COLORS.accent,fg=COLORS.ink){
+function button(text,x,y,w,h,fill=COLORS.accent,fg='#fff'){
   roundRect(x,y,w,h,18,fill,'#00000020');
   ctx.fillStyle=fg; ctx.font='bold 26px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(text, x+w/2, y+h/2);
@@ -61,359 +66,62 @@ function drawBadge(x,y,label,value){
   ctx.fillText(value, x+16, y+54);
 }
 
-/* ---------- Words dataset ---------- */
-const WORDS = [
-  {fr:'bonjour', en:'hello'}, {fr:'fromage', en:'cheese'}, {fr:'pomme', en:'apple'},
-  {fr:'merci', en:'thank you'}, {fr:'souris', en:'mouse'}, {fr:'pain', en:'bread'},
-  {fr:'eau', en:'water'}, {fr:'lait', en:'milk'}, {fr:'sucre', en:'sugar'},
-  {fr:'sel', en:'salt'}, {fr:'beurre', en:'butter'}, {fr:'fraise', en:'strawberry'},
-  {fr:'citron', en:'lemon'}, {fr:'ami', en:'friend'}, {fr:'faim', en:'hunger'},
-  {fr:'soif', en:'thirst'}, {fr:'ouvert', en:'open'}, {fr:'fermé', en:'closed'},
-  {fr:'lent', en:'slow'}, {fr:'vite', en:'fast'}
-];
-let shuffledWords = shuffle([...WORDS]); let wordIndex=0;
-function nextWord(){ if(wordIndex>=shuffledWords.length){shuffledWords=shuffle([...WORDS]); wordIndex=0}
-  return shuffledWords[wordIndex++];
+// ===== Progress storage =====
+const LS='gare_a_mots_progress_v1';
+function loadProg(){ const d=JSON.parse(localStorage.getItem(LS)||'{}'); const today=new Date().toISOString().slice(0,10);
+  if(d.last!==today){ const y=new Date(); y.setDate(new Date().getDate()-1); const ys=y.toISOString().slice(0,10);
+    d.streak=(d.last===ys)?(d.streak||0)+1:(d.streak||0); d.last=today; d.todayLearned=0; d.todayPlayed=0; }
+  d.learned=d.learned||0; d.games=d.games||0; d.words=d.words||{}; return d;
 }
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()* (i+1)); [a[i],a[j]]=[a[j],a[i]]} return a}
+let PROG=loadProg(); function saveProg(){ localStorage.setItem(LS,JSON.stringify(PROG)); }
 
-/* ---------- Voice ---------- */
-let voiceFR = null;
-function pickFrenchVoice(){
-  const voices = speechSynthesis.getVoices();
-  voiceFR = voices.find(v => /fr/i.test(v.lang)) || voices[0] || null;
-}
-speechSynthesis.onvoiceschanged = pickFrenchVoice; pickFrenchVoice();
-function speakFR(text){
-  try{
-    const u = new SpeechSynthesisUtterance(text);
-    if(voiceFR) u.voice = voiceFR;
-    u.lang = (voiceFR && voiceFR.lang) || 'fr-FR';
-    u.rate = 0.95; u.pitch = 1;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
-  }catch(e){}
-}
-
-/* ---------- Progress (localStorage) ---------- */
-const LS_KEY='fromagerie_progress_v1';
-function loadProgress(){
-  const d = JSON.parse(localStorage.getItem(LS_KEY)||'{}');
-  const today = new Date(); const ymd = today.toISOString().slice(0,10);
-  if(d.lastDay!==ymd){
-    const yesterday = new Date(today); yesterday.setDate(today.getDate()-1);
-    const ymdY = yesterday.toISOString().slice(0,10);
-    d.streak = (d.lastDay===ymdY) ? (d.streak||0)+1 : Math.max(d.streak||0, 0);
-    d.lastDay = ymd; d.todayLearned = 0; d.todayPlayed = 0;
-  }
-  d.learned = d.learned||0; d.games = d.games||0; d.streak = d.streak||0;
-  d.words = d.words||{}; d.theme = d.theme||'classic';
-  return d;
-}
-let PROG = loadProgress();
-function saveProgress(){ localStorage.setItem(LS_KEY, JSON.stringify(PROG)); }
-function markLearned(word){
-  if(!PROG.words[word]){ PROG.words[word]=1; PROG.learned++; PROG.todayLearned++; saveProgress(); }
-}
-
-/* ---------- Input ---------- */
-let pointer = {x:0,y:0,down:false};
-canvas.addEventListener('pointerdown',e=>{pointer.down=true; setPointer(e)});
-canvas.addEventListener('pointerup',e=>{pointer.down=false;});
-canvas.addEventListener('pointermove',setPointer);
-function setPointer(e){
-  const rect = canvas.getBoundingClientRect();
-  // Use CSS pixels directly because we draw in CSS px units
-  pointer.x = (e.clientX - rect.left);
-  pointer.y = (e.clientY - rect.top);
-}
-
-/* ---------- Router ---------- */
-let route='menu';
-let buttons=[];
-function nav(to){ route=to; buttons.length=0; if(to==='game') startGame(); if(to==='quiz') startQuiz(); if(to==='flash') startFlash(); }
-
-/* ---------- PWA install globals ---------- */
-let deferredPrompt = null;
-let canInstall = false;
-function isStandalone() {
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-}
-function isiOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent); }
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW registration failed:', err));
-  });
-}
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault(); deferredPrompt = e;
-  if (!isStandalone()) { canInstall = true; }
-});
-window.addEventListener('appinstalled', () => {
-  canInstall = false; deferredPrompt = null;
-  wordShown = { fr: 'Installé !', en: 'App installed 🎉' }; wordTimer = 2.2;
-});
-
-/* ---------- Menu Screen ---------- */
-function drawHeader(){
-  for(let i=0;i<12;i++){
-    ctx.fillStyle= i%2? COLORS.accent: COLORS.accent2;
-    ctx.fillRect(i*(CW()/12),0, CW()/12, 80);
-  }
-  ctx.fillStyle=COLORS.primary; ctx.font='bold 54px system-ui'; ctx.textAlign='center';
-  ctx.fillText('FROMAGERIE — Learn French', CW()/2, 160);
-  ctx.font='24px system-ui'; ctx.fillStyle=COLORS.ink;
-  ctx.fillText('A cozy canvas app to practice vocabulary with games, flashcards, and quizzes.', CW()/2, 205);
-}
+// ===== Menu =====
+let route='menu', buttons=[];
 function drawMenu(){
   drawHeader();
-
-  // start fresh BEFORE pushing any buttons
-  buttons = [];
-
-  // Install button or iOS hint
-  if (canInstall && !isStandalone()) {
-    const ib = button('⬇ Install app', CW()/2-260, 280, 520, 56, '#ffffff', COLORS.ink);
-    ib.onClick = async () => {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') { canInstall = false; deferredPrompt = null; }
-    };
-    buttons.push(ib);
-  } else if (isiOS() && !isStandalone()) {
-    roundRect(CW()/2-300, 280, 600, 56, 14, '#ffffffcc', '#00000010');
-    ctx.textAlign='center'; ctx.fillStyle=COLORS.ink; ctx.font='18px system-ui';
-    ctx.fillText('On iPhone/iPad: Share ▸ Add to Home Screen to install', CW()/2, 312);
-  }
-
-  // badges
+  buttons=[];
   drawBadge(40,240,'Daily streak', PROG.streak+' 🔥');
   drawBadge(240,240,'Words learned', PROG.learned);
   drawBadge(440,240,'Games played', PROG.games);
 
-  // main buttons (PUSH, don’t reset!)
   buttons.push( button('🐭 Mouse & Cheese (Game)', CW()/2-260, 340, 520, 70, COLORS.green) ); buttons[buttons.length-1].route='game';
-  buttons.push( button('🗂 Flashcards', CW()/2-260, 430, 520, 70) ); buttons[buttons.length-1].route='flash';
-  buttons.push( button('📝 Quiz', CW()/2-260, 520, 520, 70) ); buttons[buttons.length-1].route='quiz';
-  buttons.push( button('📈 Progress', CW()/2-260, 610, 520, 70) ); buttons[buttons.length-1].route='progress';
+  buttons.push( button('🗂 Flashcards', CW()/2-260, 430, 520, 70, COLORS.accent) ); buttons[buttons.length-1].route='flash';
+  buttons.push( button('📝 Quiz', CW()/2-260, 520, 520, 70, COLORS.accent2) ); buttons[buttons.length-1].route='quiz';
+  buttons.push( button('📈 Progress', CW()/2-260, 610, 520, 70, COLORS.steel, '#fff') ); buttons[buttons.length-1].route='progress';
 
-  ctx.fillStyle='#00000060'; ctx.font='16px system-ui'; ctx.textAlign='center';
-  ctx.fillText('Tip: enable audio — each cheese teaches a new French word with native pronunciation.', CW()/2, CH()-80);
-}
-
-
-/* ---------- Click handling ---------- */
-canvas.addEventListener('click', ()=>{
-  for(const b of buttons){
-    if(pointer.x>=b.x && pointer.x<=b.x+b.w && pointer.y>=b.y && pointer.y<=b.y+b.h){
-      if(b.onClick) b.onClick(); else if(b.route) nav(b.route); return;
-    }
-  }
-});
-
-/* ---------- Game (Snake-like) ---------- */
-const GRID=24; // CSS pixels
-let gCols,gRows;
-let mouse, dir, cheese, tail, tick, speed, alive, wordShown=null, wordTimer=0;
-function startGame(){
-  gCols = Math.floor(CW() / GRID);
-  gRows = Math.floor((CH() - 160) / GRID);
-  const cx=Math.floor(gCols/2), cy=Math.floor(gRows/2);
-  mouse = {x:cx, y:cy};
-  dir = {x:1,y:0, next:{x:1,y:0}};
-  tail = [{x:cx-1,y:cy},{x:cx-2,y:cy}];
-  speed = 8; tick=0; alive=true;
-  cheese = randCell();
-  wordShown=null; wordTimer=0;
-  PROG.games++; PROG.todayPlayed++; saveProgress();
-}
-function randCell(){ return {x: Math.floor(Math.random()*gCols), y: Math.floor(Math.random()*gRows)}; }
-addEventListener('keydown',e=>{
-  if(route!=='game') return;
-  const k = e.key;
-  if(k==='ArrowUp'   && dir.y!==1)  dir.next={x:0,y:-1};
-  if(k==='ArrowDown' && dir.y!==-1) dir.next={x:0,y:1};
-  if(k==='ArrowLeft' && dir.x!==1)  dir.next={x:-1,y:0};
-  if(k==='ArrowRight'&& dir.x!==-1) dir.next={x:1,y:0};
-});
-function updateGame(dt){
-  if(!alive) return;
-  tick += dt;
-  const step = 1/speed;
-  if(tick >= step){
-    tick -= step;
-    dir.x = dir.next.x; dir.y=dir.next.y;
-    tail.unshift({x:mouse.x,y:mouse.y});
-    tail.pop();
-    mouse.x += dir.x; mouse.y += dir.y;
-    if(mouse.x<0) mouse.x=gCols-1; if(mouse.x>=gCols) mouse.x=0;
-    if(mouse.y<0) mouse.y=gRows-1; if(mouse.y>=gRows) mouse.y=0;
-    if(tail.some(s=>s.x===mouse.x && s.y===mouse.y)){ alive=false; setTimeout(()=>{},300); }
-    if(mouse.x===cheese.x && mouse.y===cheese.y){
-      tail.push({...tail[tail.length-1]});
-      cheese = randCell();
-      speed = Math.min(14, speed+0.25);
-      const w = nextWord();
-      wordShown = w; wordTimer = 2.4;
-      speakFR(w.fr);
-      markLearned(w.fr);
-    }
-  }
-  if(wordTimer>0){ wordTimer -= dt; if(wordTimer<=0) wordShown=null; }
-}
-function drawGame(){
-  ctx.fillStyle='#fff3d9'; ctx.fillRect(0,80,CW(),CH()-160);
-  ctx.strokeStyle='#00000008'; ctx.lineWidth=1;
-  for(let x=0;x<gCols;x++){ ctx.beginPath(); ctx.moveTo(x*GRID,80); ctx.lineTo(x*GRID,CH()-80); ctx.stroke(); }
-  for(let y=0;y<gRows;y++){ ctx.beginPath(); ctx.moveTo(0,80+y*GRID); ctx.lineTo(CW(),80+y*GRID); ctx.stroke(); }
-  drawCheese(cheese.x, cheese.y);
-  for(const s of tail) drawMouseCell(s.x,s.y,false);
-  drawMouseCell(mouse.x, mouse.y, true);
-  roundRect(20,20,260,50,12,'#ffffffcc','#00000010');
-  ctx.fillStyle=COLORS.ink; ctx.font='20px system-ui'; ctx.textAlign='left'; ctx.textBaseline='middle';
-  ctx.fillText('Arrow keys to move  •  Esc: Menu', 34, 45);
-  const b=button('← Back', CW()-160, 20, 140, 50, '#ffffffcc', COLORS.ink);
-  b.onClick=()=>nav('menu'); buttons=[b];
-  if(!alive){
-    ctx.fillStyle='#00000070'; ctx.fillRect(0,0,CW(),CH());
-    roundRect(CW()/2-220, CH()/2-140, 440, 220, 22, '#fff','#00000020');
-    ctx.fillStyle=COLORS.primary; ctx.font='bold 36px system-ui'; ctx.textAlign='center';
-    ctx.fillText('Oops! The mouse bumped itself.', CW()/2, CH()/2-40);
-    const rb=button('Play again', CW()/2-120, CH()/2+10, 240, 60, COLORS.green);
-    rb.onClick=()=>startGame(); buttons=[b,rb];
-  }
-  if(wordShown){
-    roundRect(CW()/2-220, 90, 440, 110, 18, '#fff','#00000020');
-    ctx.textAlign='center';
-    ctx.fillStyle=COLORS.primary; ctx.font='bold 44px system-ui';
-    ctx.fillText(wordShown.fr, CW()/2, 135);
-    ctx.fillStyle=COLORS.ink; ctx.font='22px system-ui';
-    ctx.fillText('= '+wordShown.en, CW()/2, 175);
-  }
-}
-function drawMouseCell(x,y,head=false){
-  const px = x*GRID, py = 80+y*GRID;
-  roundRect(px+4,py+4,GRID-8,GRID-8,10, head? '#6a994e':'#8fbf6e','#00000010');
-  if(head){
-    ctx.fillStyle='#ffff'; ctx.beginPath();
-    ctx.arc(px+GRID-14, py+10, 6, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle='#000'; ctx.beginPath();
-    ctx.arc(px+GRID-20, py+GRID-12, 3, 0, Math.PI*2); ctx.fill();
-  }
-}
-function drawCheese(x,y){
-  const px = x*GRID, py = 80+y*GRID;
-  roundRect(px+8,py+8,GRID-16,GRID-16,10, COLORS.accent,'#00000010');
-  ctx.fillStyle='#ffd86b';
-  for(let i=0;i<3;i++){
-    const hx = px+12 + i*12; const hy = py+12 + (i%2?8:0);
-    ctx.beginPath(); ctx.arc(hx,hy,4,0,Math.PI*2); ctx.fill();
+  // Install bottom-left
+  if (canInstall && !isStandalone()) {
+    const ib = button('⬇ Install app', 30, CH()-70, 220, 50, '#ffffff', COLORS.ink);
+    ib.onClick = async () => { if(!deferredPrompt) return; deferredPrompt.prompt(); const {outcome}=await deferredPrompt.userChoice; if(outcome==='accepted'){ canInstall=false; deferredPrompt=null; } };
+    buttons.push(ib);
+  } else if (isiOS() && !isStandalone()) {
+    ctx.fillStyle = '#00000080'; ctx.font='14px system-ui'; ctx.textAlign='left';
+    ctx.fillText('On iPhone/iPad: Share ▸ Add to Home Screen', 30, CH()-30);
   }
 }
 
-/* ---------- Flashcards ---------- */
-let flashIndex=0, flashFront=true;
-function startFlash(){ flashIndex=0; flashFront=true; }
-function drawFlash(){
-  drawHeader();
-  buttons=[];
-  const w = WORDS[flashIndex];
-  roundRect(CW()/2-260, 260, 520, 240, 26, '#fff','#00000020');
-  ctx.textAlign='center'; ctx.fillStyle=COLORS.primary;
-  ctx.font='bold 60px system-ui';
-  ctx.fillText(flashFront? w.fr : w.en, CW()/2, 370);
-  const bFlip = button('🔊 Speak / Flip', CW()/2-140, 520, 280, 60, COLORS.green);
-  bFlip.onClick=()=>{
-    speakFR(w.fr);
-    flashFront = !flashFront;
-    if(flashFront){ markLearned(w.fr); }
-  };
-  const bPrev = button('◀', CW()/2-260, 520, 60, 60, '#fff');
-  bPrev.onClick=()=>{ flashIndex=(flashIndex-1+WORDS.length)%WORDS.length; flashFront=true; };
-  const bNext = button('▶', CW()/2+200, 520, 60, 60, '#fff');
-  bNext.onClick=()=>{ flashIndex=(flashIndex+1)%WORDS.length; flashFront=true; };
-  const bBack = button('← Back', 20, 20, 140, 50, '#ffffffcc', COLORS.ink); bBack.onClick=()=>nav('menu');
-  buttons.push(bFlip,bPrev,bNext,bBack);
-  drawBadge(40,240,'Known today', PROG.todayLearned||0);
+// ===== Railway Background =====
+function drawHeader(){
+  const w=CW(); const seg=w/10;
+  ctx.fillStyle=COLORS.paper; ctx.fillRect(0,0,w,CH());
+  for(let i=0;i<10;i++){ ctx.fillStyle= i%3===0? COLORS.accent : (i%3===1? COLORS.accent2 : '#fed766'); ctx.fillRect(i*seg,0,seg,74); }
+  ctx.fillStyle=COLORS.primary; ctx.font='bold 54px system-ui'; ctx.textAlign='center'; ctx.fillText(`${APP_NAME} — Learn French`, w/2, 150);
 }
 
-/* ---------- Quiz ---------- */
-let quizQ=[], qIdx=0, qScore=0;
-function startQuiz(){ quizQ = buildQuiz(6); qIdx=0; qScore=0; }
-function buildQuiz(n){
-  const bag = shuffle([...WORDS]).slice(0,n);
-  return bag.map(w=>{
-    const wrong = shuffle(WORDS.filter(x=>x!==w)).slice(0,3).map(x=>x.fr);
-    const options = shuffle([w.fr, ...wrong]);
-    return {en:w.en, fr:w.fr, options};
-  });
-}
-function drawQuiz(){
-  drawHeader();
-  buttons=[];
-  if(qIdx >= quizQ.length){
-    roundRect(CW()/2-260, 300, 520, 230, 26, '#fff','#00000020');
-    ctx.textAlign='center';
-    ctx.fillStyle=COLORS.primary; ctx.font='bold 40px system-ui';
-    ctx.fillText('Score: '+qScore+' / '+quizQ.length, CW()/2, 370);
-    const bb = button('Back to Menu', CW()/2-160, 430, 320, 70, COLORS.green); bb.onClick=()=>nav('menu'); buttons.push(bb);
-    return;
-  }
-  const q = quizQ[qIdx];
-  ctx.textAlign='center';
-  ctx.fillStyle=COLORS.ink; ctx.font='bold 30px system-ui';
-  ctx.fillText('Choose the French word for:', CW()/2, 290);
-  ctx.fillStyle=COLORS.primary; ctx.font='bold 56px system-ui';
-  ctx.fillText(q.en, CW()/2, 350);
-  const y0=420;
-  q.options.forEach((opt,i)=>{
-    const bw = 520, bh=60;
-    const bx = CW()/2 - bw/2;
-    const by = y0 + i*78;
-    const btn = button(opt, bx, by, bw, bh, '#fff');
-    btn.onClick=()=>{
-      if(opt===q.fr){ qScore++; markLearned(q.fr); speakFR(q.fr); }
-      qIdx++;
-    };
-    buttons.push(btn);
-  });
-  const b = button('← Back', 20, 20, 140, 50, '#ffffffcc', COLORS.ink); b.onClick=()=>nav('menu'); buttons.push(b);
-}
+// ===== PWA Install Logic =====
+let deferredPrompt=null, canInstall=false;
+function isStandalone(){ return matchMedia('(display-mode: standalone)').matches || navigator.standalone===true; }
+function isiOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+if('serviceWorker' in navigator){ addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(console.error); }); }
+addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredPrompt=e; if(!isStandalone()) canInstall=true; });
 
-/* ---------- Progress screen ---------- */
-function drawProgress(){
-  drawHeader();
-  buttons=[];
-  const learned = PROG.learned;
-  const streak = PROG.streak;
-  const games = PROG.games;
-  roundRect(CW()/2-280, 260, 560, 320, 24, '#fff', '#00000020');
-  ctx.textAlign='left'; ctx.fillStyle=COLORS.primary; ctx.font='bold 30px system-ui';
-  ctx.fillText('Your Fromagerie Stats', CW()/2-240, 310);
-  ctx.fillStyle=COLORS.ink; ctx.font='24px system-ui';
-  ctx.fillText('🔥 Daily streak: '+streak, CW()/2-240, 360);
-  ctx.fillText('📚 Words learned (unique): '+learned, CW()/2-240, 400);
-  ctx.fillText('🎮 Games played: '+games, CW()/2-240, 440);
-  ctx.fillText('🧠 Today learned: '+(PROG.todayLearned||0), CW()/2-240, 480);
-  ctx.fillText('🧀 Today games: '+(PROG.todayPlayed||0), CW()/2-240, 520);
-  const b = button('← Back', 20, 20, 140, 50, '#ffffffcc', COLORS.ink); b.onClick=()=>nav('menu'); buttons.push(b);
-}
-
-/* ---------- Main loop ---------- */
-let last=performance.now();
-function loop(t){
-  const dt = Math.min(0.1, (t-last)/1000); last=t;
+// ===== Main Loop =====
+function loop(){
   ctx.clearRect(0,0,CW(),CH());
-  if(route==='menu'){ drawMenu(); }
-  if(route==='game'){ updateGame(dt); drawGame(); }
-  if(route==='flash'){ drawFlash(); }
-  if(route==='quiz'){ drawQuiz(); }
-  if(route==='progress'){ drawProgress(); }
+  if(route==='menu') drawMenu();
   requestAnimationFrame(loop);
 }
-requestAnimationFrame(loop);
-addEventListener('keydown',e=>{ if(e.key==='Escape') nav('menu'); });
+loop();
 </script>
 </body>
 </html>
