@@ -180,12 +180,23 @@ function drawHeader(){
 function drawMenu(){
   drawHeader();
 
-  // start fresh BEFORE pushing any buttons
+  // Start fresh
   buttons = [];
 
-  // Install button or iOS hint
+  // badges
+  drawBadge(40,240,'Daily streak', PROG.streak+' 🔥');
+  drawBadge(240,240,'Words learned', PROG.learned);
+  drawBadge(440,240,'Games played', PROG.games);
+
+  // main buttons
+  buttons.push( button('🐭 Mouse & Cheese (Game)', CW()/2-260, 340, 520, 70, COLORS.green) ); buttons[buttons.length-1].route='game';
+  buttons.push( button('🗂 Flashcards', CW()/2-260, 430, 520, 70) ); buttons[buttons.length-1].route='flash';
+  buttons.push( button('📝 Quiz', CW()/2-260, 520, 520, 70) ); buttons[buttons.length-1].route='quiz';
+  buttons.push( button('📈 Progress', CW()/2-260, 610, 520, 70) ); buttons[buttons.length-1].route='progress';
+
+  // Install button (bottom-left corner)
   if (canInstall && !isStandalone()) {
-    const ib = button('⬇ Install app', CW()/2-260, 280, 520, 56, '#ffffff', COLORS.ink);
+    const ib = button('⬇ Install app', 30, CH() - 70, 220, 50, '#ffffff', COLORS.ink);
     ib.onClick = async () => {
       if (!deferredPrompt) return;
       deferredPrompt.prompt();
@@ -194,25 +205,17 @@ function drawMenu(){
     };
     buttons.push(ib);
   } else if (isiOS() && !isStandalone()) {
-    roundRect(CW()/2-300, 280, 600, 56, 14, '#ffffffcc', '#00000010');
-    ctx.textAlign='center'; ctx.fillStyle=COLORS.ink; ctx.font='18px system-ui';
-    ctx.fillText('On iPhone/iPad: Share ▸ Add to Home Screen to install', CW()/2, 312);
+    ctx.fillStyle = '#00000080';
+    ctx.font = '14px system-ui';
+    ctx.textAlign = 'left';
+    ctx.fillText('On iPhone/iPad: Share ▸ Add to Home Screen', 30, CH() - 30);
   }
 
-  // badges
-  drawBadge(40,240,'Daily streak', PROG.streak+' 🔥');
-  drawBadge(240,240,'Words learned', PROG.learned);
-  drawBadge(440,240,'Games played', PROG.games);
-
-  // main buttons (PUSH, don’t reset!)
-  buttons.push( button('🐭 Mouse & Cheese (Game)', CW()/2-260, 340, 520, 70, COLORS.green) ); buttons[buttons.length-1].route='game';
-  buttons.push( button('🗂 Flashcards', CW()/2-260, 430, 520, 70) ); buttons[buttons.length-1].route='flash';
-  buttons.push( button('📝 Quiz', CW()/2-260, 520, 520, 70) ); buttons[buttons.length-1].route='quiz';
-  buttons.push( button('📈 Progress', CW()/2-260, 610, 520, 70) ); buttons[buttons.length-1].route='progress';
-
+  // footer tip
   ctx.fillStyle='#00000060'; ctx.font='16px system-ui'; ctx.textAlign='center';
   ctx.fillText('Tip: enable audio — each cheese teaches a new French word with native pronunciation.', CW()/2, CH()-80);
 }
+
 
 
 /* ---------- Click handling ---------- */
