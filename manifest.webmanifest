@@ -2,7 +2,7 @@
   "name": "Fromagerie — Learn French",
   "short_name": "Fromagerie",
   "description": "Canvas-based French learning with a mouse-and-cheese game, flashcards, and quizzes.",
-  "start_url": "fromagerie.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#fff7e6",
